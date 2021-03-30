@@ -6,7 +6,7 @@ use web3::types::{Address, H160};
 use web3::futures::StreamExt;
 use rustc_hex::FromHexError;
 
-fn answer_inline_by_article(q: InlineQuery, id: &str, title: &str, content: &str) {
+fn answer_inline_by_article(q: InlineQuery, id: &str, title: &str, content: &str) -> AnswerInlineQuery {
     let article = InlineQueryResultArticle::new(
         id,
         title,
@@ -19,7 +19,8 @@ fn answer_inline_by_article(q: InlineQuery, id: &str, title: &str, content: &str
     let r = vec![
         InlineQueryResult::InlineQueryResultArticle(article)
     ];
-    q.answer(r);
+    q.answer(r)
+
 }
 
 #[tokio::main]
@@ -42,40 +43,41 @@ async fn main() -> Result<(), Error> {
                 let query_parse: Vec<&str> = query_str.split(' ').collect();
                 match query_parse.len() {
                     0 => {
-                        answer_inline_by_article(
+                        api.send(answer_inline_by_article(
                             q,
                             "usage",
                             "Command usage",
                             "Use `gas` or `balance <eth address>`",
-                        )
+                        )).await?;
                     }
                     1 => {
                         match query_parse[0] {
                             "balance" => {
-                                answer_inline_by_article(
+                                api.send(answer_inline_by_article(
                                     q,
                                     "Account needed",
                                     "Enter your account to query",
-                                    "Usage: `balance <account>`")
+                                    "Usage: `balance <account>`"
+                                )).await?;
                             }
                             "gas" => {
                                 let gas = web3.eth().gas_price().await;
                                 match gas {
                                     Ok(v) => {
-                                        answer_inline_by_article(
+                                        api.send(answer_inline_by_article(
                                             q,
                                             "gas price",
                                             &*format!("Gas Price is {}", v.to_string()),
                                             &*format!("Current gas price of ethereum is {}", v),
-                                        )
+                                        )).await?;
                                     }
                                     Err(_) => {
-                                        answer_inline_by_article(
+                                        api.send(answer_inline_by_article(
                                             q,
                                             "fail",
                                             "Failed to fetch gas price",
                                             "Failed to fetch gas price",
-                                        )
+                                        )).await?;
                                     }
                                 }
                             }
@@ -93,12 +95,12 @@ async fn main() -> Result<(), Error> {
                                         ).await;
                                         match balance {
                                             Ok(r) => {
-                                                answer_inline_by_article(
+                                                api.send(answer_inline_by_article(
                                                     q,
                                                     &*format!("balance {}", query_parse[1]),
                                                     &*format!("Balance of account {} is {}", query_parse[1], r),
                                                     &*format!("Balance of account {} is {}", query_parse[1], r),
-                                                )
+                                                )).await?;
                                             }
                                             Err(_) => {}
                                         }
@@ -107,12 +109,12 @@ async fn main() -> Result<(), Error> {
                                 }
                             }
                             _ => {
-                                answer_inline_by_article(
+                                api.send(answer_inline_by_article(
                                     q,
                                     "fail cmd",
                                     "Failed to run your command",
                                     "Cannot run your command",
-                                )
+                                )).await?;
                             }
                         }
                     }
